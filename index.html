@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with Labels</title>
+    <title>FSA Map</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -26,15 +26,8 @@
                 // Add GeoJSON layer to the map
                 L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
-                        // Bind a popup to each feature showing the FSA name
+                        // You can customize the popup or styling here
                         layer.bindPopup("FSA: " + feature.properties.name);
-
-                        // Bind a tooltip (label) to each feature, always visible
-                        layer.bindTooltip(feature.properties.name, {
-                            permanent: true,   // Always show the label
-                            direction: 'center',  // Center the label on the polygon
-                            className: 'label-tooltip'  // Optional: Add custom class for styling
-                        }).openTooltip();  // Open the tooltip immediately
                     }
                 }).addTo(map);
             })
