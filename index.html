@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with OpenCage Geocoder</title>
+    <title>FSA Map with Availability Colors</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 </head>
 <body>
     <div id="map" style="width: 100%; height: 600px;"></div>
-    <input type="text" id="address" placeholder="Enter address">
-    <button onclick="geocodeAddress()">Search</button>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    
     <script>
         // Initialize the map
         var map = L.map('map').setView([37.105, -78.327], 10);
@@ -21,11 +20,36 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
+        // Function to determine the color based on availability
+        function getColor(availability) {
+            switch (availability) {
+                case 0: return 'red';    // Not Available
+                case 1: return 'green';  // Available Now
+                case 2: return 'orange'; // Coming Soon, No Orders Yet
+                case 3: return 'yellow'; // Coming Soon & Pre-Order Available
+                case 4: return 'blue';   // Under Construction
+                default: return 'gray';  // Unknown or undefined status
+            }
+        }
+
+        // Style each polygon based on the availability
+        function styleFeature(feature) {
+            return {
+                fillColor: getColor(feature.properties.Availability),
+                weight: 2,
+                opacity: 1,
+                color: 'white',  // Border color
+                dashArray: '3',
+                fillOpacity: 0.7
+            };
+        }
+
         // Fetch and load GeoJSON data
         fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
+                    style: styleFeature,  // Apply the style to each polygon
                     onEachFeature: function (feature, layer) {
                         var fsaName = feature.properties.Name;
                         var fsaAvailability = feature.properties.Availability;
@@ -36,42 +60,8 @@
                                         "<br>Availability: " + availabilityText);
                     }
                 }).addTo(map);
-            });
-
-        // Variable to hold the current marker
-        var currentMarker = null;
-
-        // OpenCage Geocoding function
-        function geocodeAddress() {
-            var apiKey = '4cedda11dbc94d3ea6eb8dce542b3e9d';  // Your OpenCage API key
-            var address = document.getElementById('address').value;
-            var url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${apiKey}`;
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.results.length > 0) {
-                        var latLng = data.results[0].geometry;  // Get lat and lng
-
-                        // Remove the current marker if it exists
-                        if (currentMarker) {
-                            map.removeLayer(currentMarker);
-                        }
-
-                        // Place a new marker
-                        currentMarker = L.marker([latLng.lat, latLng.lng]).addTo(map)
-                            .bindPopup(`Address: ${data.results[0].formatted}`).openPopup();
-
-                        // Zoom to the new marker's location
-                        map.setView([latLng.lat, latLng.lng], 14);
-                    } else {
-                        alert("Address not found. Please try again.");
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching geocoding data: ', error);
-                });
-        }
+            })
+            .catch(err => console.error("Error loading GeoJSON: ", err));
     </script>
 </body>
 </html>
