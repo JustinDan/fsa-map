@@ -26,9 +26,7 @@
                 case 0: return 'red';    // Not Available
                 case 1: return 'green';  // Available Now
                 case 2: return 'orange'; // Coming Soon, No Orders Yet
-                case 3: return 'yellow'; // Coming Soon & Pre-Order Available
-                case 4: return 'blue';   // Under Construction
-                default: return 'gray';  // Unknown or undefined status
+                default: return 'gray';  // Fallback for undefined or other statuses
             }
         }
 
@@ -54,7 +52,7 @@
                         var fsaName = feature.properties.Name;
                         var fsaAvailability = feature.properties.Availability;
 
-                        var availabilityText = ["Not Available", "Available Now", "Coming Soon, No Orders Yet", "Coming Soon & Pre-Order Available", "Under Construction"][fsaAvailability] || "Unknown";
+                        var availabilityText = ["Not Available", "Available Now", "Coming Soon, No Orders Yet"][fsaAvailability] || "Unknown";
 
                         layer.bindPopup("FSA: " + (fsaName ? fsaName : "Unknown") +
                                         "<br>Availability: " + availabilityText);
