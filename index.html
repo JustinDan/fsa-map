@@ -64,6 +64,9 @@
             }
         }
 
+        // Expose updateAvailability to the global scope
+        window.updateAvailability = updateAvailability;
+
         // Function to fetch and render multiple FSAs with editable availability
         async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
