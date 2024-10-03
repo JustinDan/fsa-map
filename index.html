@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSA Map with Availability Colors</title>
+    <title>FSA Map with Editable Availability</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -48,7 +48,17 @@
             }
         }
 
-        // Function to fetch and render multiple FSAs with colors based on availability
+        // Function to update the availability status in Firestore
+        async function updateAvailability(fsaId, newStatus) {
+            const fsaRef = doc(db, 'fsas', fsaId);
+            await updateDoc(fsaRef, {
+                Availability: parseInt(newStatus)
+            });
+            alert("Availability updated successfully!");
+            location.reload();  // Reload the page to reflect the changes
+        }
+
+        // Function to fetch and render multiple FSAs with editable availability
         async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
             const snapshot = await getDocs(fsaCollection);
@@ -75,14 +85,27 @@
 
                 // Validate and render the geometry if it's a valid GeoJSON object
                 if (parsedGeoJson && parsedGeoJson.type && parsedGeoJson.coordinates) {
-                    L.geoJSON(parsedGeoJson, {
+                    const layer = L.geoJSON(parsedGeoJson, {
                         style: {
                             color: getColor(fsaData.Availability),  // Color based on availability
                             weight: 2,
                             fillOpacity: 0.5
                         }
                     }).addTo(map);
-                    console.log("FSA geometry added to the map for FSA:", doc.id);
+
+                    // Bind a popup to allow editing of availability
+                    layer.bindPopup(`
+                        <b>FSA: ${fsaData.Name}</b><br>
+                        <label>Change Availability:</label><br>
+                        <select id="statusSelect-${doc.id}">
+                            <option value="0" ${fsaData.Availability === 0 ? 'selected' : ''}>Not Available</option>
+                            <option value="1" ${fsaData.Availability === 1 ? 'selected' : ''}>Available Now</option>
+                            <option value="2" ${fsaData.Availability === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
+                            <option value="3" ${fsaData.Availability === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
+                            <option value="4" ${fsaData.Availability === 4 ? 'selected' : ''}>Under Construction</option>
+                        </select><br>
+                        <button onclick="updateAvailability('${doc.id}', document.getElementById('statusSelect-${doc.id}').value)">Update</button>
+                    `);
                 } else {
                     console.error("Invalid GeoJSON structure for FSA:", doc.id, parsedGeoJson);
                 }
