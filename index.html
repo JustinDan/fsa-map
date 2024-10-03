@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSA Map with Editable Availability</title>
+    <title>FSA Map with Editable Availability and Labels</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -12,6 +12,14 @@
             width: 100%;
             margin: 0;
             padding: 0;
+        }
+        /* CSS for the FSA labels */
+        .fsa-label {
+            font-size: 12px;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 2px 4px;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -64,9 +72,6 @@
             }
         }
 
-        // Expose updateAvailability to the global scope
-        window.updateAvailability = updateAvailability;
-
         // Function to fetch and render multiple FSAs with editable availability
         async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
@@ -102,6 +107,15 @@
                         }
                     }).addTo(map);
 
+                    // Add a label (tooltip) to each FSA, only visible on zoom level 12 or higher
+                    const label = L.tooltip({
+                        permanent: true,
+                        direction: 'center',
+                        className: 'fsa-label',
+                        opacity: 0  // Initially hidden, will be shown based on zoom
+                    }).setContent(fsaData.Name);
+                    layer.bindTooltip(label);
+
                     // Bind a popup to allow editing of availability
                     layer.bindPopup(`
                         <b>FSA: ${fsaData.Name}</b><br>
@@ -128,13 +142,27 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
-        // Initialize Leaflet map
+        // Initialize Leaflet map with zoom-dependent label visibility
         const map = L.map('map').setView([37.105, -78.327], 10);
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+
+        // Control label visibility based on zoom level
+        map.on('zoomend', function() {
+            const zoomLevel = map.getZoom();
+            map.eachLayer(function(layer) {
+                if (layer.getTooltip) {
+                    const tooltip = layer.getTooltip();
+                    if (tooltip) {
+                        tooltip.options.opacity = (zoomLevel >= 12) ? 1 : 0;
+                        tooltip.update();
+                    }
+                }
+            });
+        });
 
         console.log("Map initialized");
     </script>
