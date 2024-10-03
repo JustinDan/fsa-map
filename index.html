@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with Editable Status in Popup</title>
+    <title>FSA Map with Firebase Integration</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
     <style>
         /* Style for the search input field */
         #search-container {
@@ -52,6 +54,21 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",  // Replace with your Firebase API key
+            authDomain: "fsa-status.firebaseapp.com",
+            projectId: "fsa-status",
+            storageBucket: "fsa-status.appspot.com",
+            messagingSenderId: "153479147028",
+            appId: "1:153479147028:web:cf2512b8dd9411ec068101",
+            measurementId: "G-Z54VGVDCHF"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         // Initialize the map
         var map = L.map('map').setView([37.105, -78.327], 10);
 
@@ -59,12 +76,6 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
-
-        // Store the current search marker
-        let searchMarker = null;
-
-        // OpenCage API key (provided earlier)
-        const openCageApiKey = '4cedda11dbc94d3ea6eb8dce542b3e9d';
 
         // Function to determine the color based on availability
         function getColor(availability) {
@@ -76,23 +87,15 @@
             }
         }
 
-        // Style each polygon based on the availability
-        function styleFeature(feature) {
-            return {
-                fillColor: getColor(feature.properties.Availability),
-                weight: 2,
-                opacity: 1,
-                color: 'white',  // Border color
-                dashArray: '3',
-                fillOpacity: 0.7
-            };
-        }
-
-        // Function to update the FSA status in memory (simulated backend)
-        function updateFSAStatus(fsa, newStatus) {
-            fsa.Availability = parseInt(newStatus);  // Update the status
-            L.geoJSON(fsa).setStyle({ fillColor: getColor(fsa.Availability) });  // Update color
-            alert('FSA status updated to: ' + getStatusText(newStatus));
+        // Function to update the FSA status in Firestore
+        function updateFSAStatus(docId, newStatus) {
+            db.collection('fsas').doc(docId).update({
+                Availability: parseInt(newStatus)
+            }).then(() => {
+                alert('FSA status updated successfully');
+            }).catch((error) => {
+                console.error('Error updating status:', error);
+            });
         }
 
         // Function to get status text based on availability value
@@ -108,7 +111,7 @@
         }
 
         // Create the dropdown menu for selecting status inside the popup
-        function createPopupContent(fsaName, currentStatus, feature) {
+        function createPopupContent(fsaName, currentStatus, docId) {
             return `
                 <b>FSA: ${fsaName}</b><br>
                 <label for="statusSelect">Change Availability:</label>
@@ -119,69 +122,55 @@
                     <option value="3" ${currentStatus === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
                     <option value="4" ${currentStatus === 4 ? 'selected' : ''}>Under Construction</option>
                 </select>
-                <button onclick="updateFSAStatus(${JSON.stringify(feature.properties)}, document.getElementById('statusSelect').value)">Update Status</button>
+                <button onclick="updateFSAStatus('${docId}', document.getElementById('statusSelect').value)">Update Status</button>
             `;
         }
 
-        // Fetch and load GeoJSON data
-        fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
-            .then(response => response.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    style: styleFeature,  // Apply the style to each polygon
-                    onEachFeature: function (feature, layer) {
-                        var fsaName = feature.properties.Name;
-                        var fsaAvailability = feature.properties.Availability;
+        // Load FSAs from Firestore and plot them on the map
+        db.collection('fsas').get().then((snapshot) => {
+            snapshot.forEach((doc) => {
+                const fsa = doc.data();
+                const docId = doc.id;  // The document ID for this FSA
+                const fsaName = fsa.Name;
+                const fsaAvailability = fsa.Availability;
 
-                        // Add permanent labels using tooltips that are always visible
+                // Parse the geometry field back to GeoJSON
+                const geoJsonFeature = {
+                    type: "Feature",
+                    properties: {
+                        Name: fsaName,
+                        Availability: fsaAvailability
+                    },
+                    geometry: JSON.parse(fsa.geometry)  // Parse the geometry string back to GeoJSON
+                };
+
+                // Add GeoJSON polygon to map
+                L.geoJSON(geoJsonFeature, {
+                    style: function(feature) {
+                        return {
+                            fillColor: getColor(feature.properties.Availability),
+                            weight: 2,
+                            opacity: 1,
+                            color: 'white',
+                            dashArray: '3',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        // Add permanent label using tooltips
                         layer.bindTooltip(fsaName, {
-                            permanent: true,           // Tooltip always visible
-                            direction: 'center',       // Centered on the polygon
-                            className: 'fsa-label'     // Custom class for styling
+                            permanent: true,
+                            direction: 'center',
+                            className: 'fsa-label'
                         }).openTooltip();
 
-                        // Create a popup with a dropdown to edit the status
-                        layer.bindPopup(createPopupContent(fsaName, fsaAvailability, feature));
-
-                        // Bring tooltips to front to ensure they aren't obscured by the polygons
-                        layer.on('add', function() {
-                            this.bringToFront();
-                        });
+                        // Add popup with editable dropdown
+                        layer.bindPopup(createPopupContent(fsaName, fsaAvailability, docId));
                     }
                 }).addTo(map);
-            })
-            .catch(err => console.error("Error loading GeoJSON: ", err));
+            });
+        });
 
-        // Function to geocode an address using OpenCage API and zoom to the result
-        function geocodeAddress() {
-            var address = document.getElementById('address').value;
-            var url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}`;
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.results.length > 0) {
-                        var latLng = data.results[0].geometry;  // Get lat and lng
-                        
-                        // Remove the previous search marker if it exists
-                        if (searchMarker) {
-                            map.removeLayer(searchMarker);
-                        }
-
-                        // Add a new marker at the geocoded location
-                        searchMarker = L.marker([latLng.lat, latLng.lng]).addTo(map)
-                            .bindPopup(`Address: ${data.results[0].formatted}`).openPopup();
-
-                        // Zoom to the marker's location
-                        map.setView([latLng.lat, latLng.lng], 14);
-                    } else {
-                        alert("Address not found. Please try again.");
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching geocoding data: ', error);
-                });
-        }
     </script>
 
     <style>
