@@ -20,7 +20,7 @@
         #search-container {
             position: absolute;
             top: 10px;
-            left: 10px;
+            left: 50px; /* Moved to avoid zoom controls */
             z-index: 1000;
             background-color: white;
             padding: 10px;
@@ -119,6 +119,9 @@
                 alert("An error occurred while geocoding. Please try again.");
             }
         }
+
+        // Expose geocodeAddress to global scope
+        window.geocodeAddress = geocodeAddress;
 
         // Function to determine polygon color based on Availability status
         function getColor(availability) {
