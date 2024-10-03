@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
-        /* Map must have a height, otherwise it will not show up */
         #map {
             height: 600px;
             width: 100%;
@@ -15,7 +14,6 @@
             padding: 0;
         }
 
-        /* Style for the search input field */
         #search-container {
             position: absolute;
             top: 10px;
@@ -62,17 +60,14 @@
         <button onclick="geocodeAddress()">Search</button>
     </div>
 
-    <!-- This is the map container -->
     <div id="map"></div>
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Import Firebase functions from CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
 
-        // Your Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",
             authDomain: "fsa-status.firebaseapp.com",
@@ -83,7 +78,6 @@
             measurementId: "G-Z54VGVDCHF"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
@@ -91,12 +85,12 @@
         // Function to determine polygon color based on Availability status
         function getColor(availability) {
             switch (availability) {
-                case 0: return 'red';    // Not Available
-                case 1: return 'green';  // Available Now
-                case 2: return 'orange'; // Coming Soon, No Orders Yet
-                case 3: return 'blue';   // Coming Soon & Pre-Order Available
-                case 4: return 'yellow'; // Under Construction
-                default: return 'gray';  // Fallback for undefined or other statuses
+                case 0: return 'red';
+                case 1: return 'green';
+                case 2: return 'orange';
+                case 3: return 'blue';
+                case 4: return 'yellow';
+                default: return 'gray';
             }
         }
 
@@ -120,40 +114,48 @@
                         geometry: JSON.parse(fsa.geometry) // Parse string into GeoJSON
                     };
 
-                    // Add the polygon to the map
-                    L.geoJSON(geoJsonFeature, {
-                        style: function(feature) {
-                            return {
-                                fillColor: getColor(feature.properties.Availability),
-                                weight: 2,
-                                opacity: 1,
-                                color: 'white',
-                                dashArray: '3',
-                                fillOpacity: 0.7
-                            };
-                        },
-                        onEachFeature: function(feature, layer) {
-                            layer.bindTooltip(fsaName, {
-                                permanent: true,
-                                direction: 'center',
-                                className: 'fsa-label'
-                            }).openTooltip();
+                    // Log the geoJsonFeature to debug its structure
+                    console.log("Parsed GeoJSON feature: ", geoJsonFeature);
 
-                            const popupContent = `
-                                <b>FSA: ${fsaName}</b><br>
-                                <label>Change Availability:</label>
-                                <select id="statusSelect">
-                                    <option value="0" ${availability === 0 ? 'selected' : ''}>Not Available</option>
-                                    <option value="1" ${availability === 1 ? 'selected' : ''}>Available Now</option>
-                                    <option value="2" ${availability === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
-                                    <option value="3" ${availability === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
-                                    <option value="4" ${availability === 4 ? 'selected' : ''}>Under Construction</option>
-                                </select>
-                                <button onclick="updateAvailability('${fsa.id}', document.getElementById('statusSelect').value)">Update</button>
-                            `;
-                            layer.bindPopup(popupContent);
-                        }
-                    }).addTo(map);
+                    // Ensure the GeoJSON is valid before adding it to the map
+                    if (geoJsonFeature.geometry && geoJsonFeature.geometry.type && geoJsonFeature.geometry.coordinates) {
+                        // Add the polygon to the map
+                        L.geoJSON(geoJsonFeature, {
+                            style: function(feature) {
+                                return {
+                                    fillColor: getColor(feature.properties.Availability),
+                                    weight: 2,
+                                    opacity: 1,
+                                    color: 'white',
+                                    dashArray: '3',
+                                    fillOpacity: 0.7
+                                };
+                            },
+                            onEachFeature: function(feature, layer) {
+                                layer.bindTooltip(fsaName, {
+                                    permanent: true,
+                                    direction: 'center',
+                                    className: 'fsa-label'
+                                }).openTooltip();
+
+                                const popupContent = `
+                                    <b>FSA: ${fsaName}</b><br>
+                                    <label>Change Availability:</label>
+                                    <select id="statusSelect">
+                                        <option value="0" ${availability === 0 ? 'selected' : ''}>Not Available</option>
+                                        <option value="1" ${availability === 1 ? 'selected' : ''}>Available Now</option>
+                                        <option value="2" ${availability === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
+                                        <option value="3" ${availability === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
+                                        <option value="4" ${availability === 4 ? 'selected' : ''}>Under Construction</option>
+                                    </select>
+                                    <button onclick="updateAvailability('${fsa.id}', document.getElementById('statusSelect').value)">Update</button>
+                                `;
+                                layer.bindPopup(popupContent);
+                            }
+                        }).addTo(map);
+                    } else {
+                        console.error(`Invalid GeoJSON for FSA: ${fsaName}`, geoJsonFeature);
+                    }
                 } catch (error) {
                     console.error(`Error parsing or rendering FSA: ${fsaName}`, error);
                 }
@@ -167,7 +169,7 @@
                 Availability: parseInt(newStatus)
             });
             alert("Availability updated successfully!");
-            location.reload(); // Reload the page to reflect changes
+            location.reload();
         }
 
         // Initialize Leaflet map and load FSAs
