@@ -119,17 +119,26 @@
                     const rawGeometry = fsa.geometry;
                     console.log(`Raw geometry for FSA ${fsaName}:`, rawGeometry); // Log raw geometry
 
-                    // Parse and validate the geometry field
+                    // Catch JSON parse errors
+                    let geoJsonGeometry;
+                    try {
+                        geoJsonGeometry = JSON.parse(rawGeometry); // Parse string into GeoJSON
+                    } catch (parseError) {
+                        console.error(`Error parsing geometry for FSA ${fsaName}:`, parseError);
+                        return; // Skip this FSA if the geometry can't be parsed
+                    }
+
+                    // Log the parsed GeoJSON geometry for debugging
+                    console.log("Parsed GeoJSON geometry for FSA:", fsaName, geoJsonGeometry);
+
                     const geoJsonFeature = {
                         type: "Feature",
                         properties: {
                             Name: fsaName,
                             Availability: availability
                         },
-                        geometry: JSON.parse(rawGeometry) // Parse string into GeoJSON
+                        geometry: geoJsonGeometry // Use the parsed GeoJSON geometry
                     };
-
-                    console.log("Parsed GeoJSON feature for FSA:", fsaName, geoJsonFeature);
 
                     // Ensure the GeoJSON is valid before adding it to the map
                     if (isValidGeoJson(geoJsonFeature.geometry)) {
