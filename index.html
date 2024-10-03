@@ -41,17 +41,15 @@
             };
         }
 
-        // Function to calculate the centroid of a polygon
+        // Function to calculate the centroid of a polygon (handling lat/lng format)
         function calculateCentroid(latlngs) {
             let latSum = 0, lngSum = 0, totalPoints = 0;
-            latlngs.forEach(ring => {
-                ring.forEach(point => {
-                    latSum += point[1];
-                    lngSum += point[0];
-                    totalPoints++;
-                });
+            latlngs.forEach(point => {
+                latSum += point[1]; // Lat
+                lngSum += point[0]; // Lng
+                totalPoints++;
             });
-            return [latSum / totalPoints, lngSum / totalPoints];  // Return centroid [lat, lng]
+            return [latSum / totalPoints, lngSum / totalPoints];  // Return [lat, lng]
         }
 
         // Fetch and load GeoJSON data
@@ -70,18 +68,25 @@
                         layer.bindPopup("FSA: " + (fsaName ? fsaName : "Unknown") +
                                         "<br>Availability: " + availabilityText);
 
-                        // Calculate the centroid of the polygon and place a marker with a label
-                        var latlngs = feature.geometry.coordinates[0]; // Get polygon coordinates
-                        var centroid = calculateCentroid(latlngs);     // Calculate the centroid
+                        // Handle multi-polygon and single-polygon cases
+                        var latlngs;
+                        if (feature.geometry.type === "Polygon") {
+                            latlngs = feature.geometry.coordinates[0]; // Get the outer ring of the polygon
+                        } else if (feature.geometry.type === "MultiPolygon") {
+                            latlngs = feature.geometry.coordinates[0][0]; // First ring of the first polygon in the multipolygon
+                        }
 
-                        // Add a label (using a marker) at the centroid
-                        L.marker(centroid, {
-                            icon: L.divIcon({
-                                className: 'fsa-label',
-                                html: fsaName,
-                                iconSize: [0, 0]  // No default marker icon size
-                            })
-                        }).addTo(map);
+                        // Calculate the centroid and place a marker with a label
+                        if (latlngs) {
+                            var centroid = calculateCentroid(latlngs); // Calculate the centroid
+                            L.marker([centroid[0], centroid[1]], {
+                                icon: L.divIcon({
+                                    className: 'fsa-label',
+                                    html: fsaName,
+                                    iconSize: [0, 0]  // No marker icon
+                                })
+                            }).addTo(map);
+                        }
                     }
                 }).addTo(map);
             })
