@@ -38,9 +38,12 @@
                 }).addTo(map);
             });
 
+        // Variable to hold the current marker
+        var currentMarker = null;
+
         // OpenCage Geocoding function
         function geocodeAddress() {
-            var apiKey = '4cedda11dbc94d3ea6eb8dce542b3e9d';  // Replace with your OpenCage API key
+            var apiKey = 'YOUR_OPENCAGE_API_KEY';  // Replace with your OpenCage API key
             var address = document.getElementById('address').value;
             var url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${apiKey}`;
 
@@ -49,11 +52,18 @@
                 .then(data => {
                     if (data.results.length > 0) {
                         var latLng = data.results[0].geometry;  // Get lat and lng
-                        map.setView([latLng.lat, latLng.lng], 14);  // Zoom to the location
 
-                        // Place a marker at the found location
-                        L.marker([latLng.lat, latLng.lng]).addTo(map)
+                        // Remove the current marker if it exists
+                        if (currentMarker) {
+                            map.removeLayer(currentMarker);
+                        }
+
+                        // Place a new marker
+                        currentMarker = L.marker([latLng.lat, latLng.lng]).addTo(map)
                             .bindPopup(`Address: ${data.results[0].formatted}`).openPopup();
+
+                        // Zoom to the new marker's location
+                        map.setView([latLng.lat, latLng.lng], 14);
                     } else {
                         alert("Address not found. Please try again.");
                     }
