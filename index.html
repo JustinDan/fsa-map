@@ -85,9 +85,6 @@
         // OpenCage API Key for geocoding
         const openCageApiKey = "4cedda11dbc94d3ea6eb8dce542b3e9d";
 
-        // Bounding box for Virginia (Southwest and Northeast coordinates)
-        const virginiaBounds = "36.540738,-83.675292,39.466012,-75.242266";
-
         // Function to geocode an address using OpenCage API and place a marker on the map
         async function geocodeAddress() {
             const address = document.getElementById("address").value;
@@ -96,8 +93,7 @@
                 return;
             }
 
-            // URL with Virginia bounding box and United States restriction
-            const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}&bounds=${virginiaBounds}&countrycode=US`;
+            const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}`;
             try {
                 const response = await fetch(url);
                 const data = await response.json();
@@ -116,7 +112,7 @@
                     marker = L.marker([lat, lng]).addTo(map).bindPopup(result.formatted).openPopup();
                     map.setView([lat, lng], 14);  // Zoom in to the searched location
                 } else {
-                    alert("Address not found within Virginia. Please try again.");
+                    alert("Address not found. Please try again.");
                 }
             } catch (error) {
                 console.error("Geocoding error:", error);
