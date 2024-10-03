@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with Permanent Labels</title>
+    <title>FSA Map with Scalable Labels</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -42,6 +42,15 @@
             };
         }
 
+        // Adjust label size based on zoom level
+        function adjustLabelSize() {
+            var zoomLevel = map.getZoom();
+            var labelSize = Math.max(8, zoomLevel * 1.2);  // Scale the size based on zoom, with a minimum size of 8px
+            document.querySelectorAll('.fsa-label').forEach(function(label) {
+                label.style.fontSize = labelSize + 'px';
+            });
+        }
+
         // Fetch and load GeoJSON data
         fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
             .then(response => response.json())
@@ -71,14 +80,19 @@
                         });
                     }
                 }).addTo(map);
+
+                // Adjust label size based on initial zoom
+                adjustLabelSize();
             })
             .catch(err => console.error("Error loading GeoJSON: ", err));
+
+        // Listen to zoom events and adjust label size dynamically
+        map.on('zoomend', adjustLabelSize);
     </script>
 
     <style>
         /* Customize label appearance */
         .fsa-label {
-            font-size: 12px;
             font-weight: bold;
             background: rgba(255, 255, 255, 0.7); /* White background with transparency */
             padding: 2px;
