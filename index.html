@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSA Map with Firebase Integration</title>
+    <title>Test Firebase Fetch</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -13,60 +13,16 @@
             margin: 0;
             padding: 0;
         }
-
-        #search-container {
-            position: absolute;
-            top: 10px;
-            left: 50px;
-            z-index: 1000;
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-
-        #address {
-            width: 300px;
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-        }
-
-        button {
-            padding: 5px 10px;
-            border: none;
-            background-color: #4CAF50;
-            color: white;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        .fsa-label {
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 2px;
-            border-radius: 4px;
-        }
     </style>
 </head>
 <body>
-
-    <div id="search-container">
-        <input type="text" id="address" placeholder="Enter address">
-        <button onclick="geocodeAddress()">Search</button>
-    </div>
 
     <div id="map"></div>
 
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",
@@ -74,145 +30,40 @@
             projectId: "fsa-status",
             storageBucket: "fsa-status.appspot.com",
             messagingSenderId: "153479147028",
-            appId: "1:153479147028:web:cf2512b8dd9411ec068101",
-            measurementId: "G-Z54VGVDCHF"
+            appId: "1:153479147028:web:cf2512b8dd9411ec068101"
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // Function to determine polygon color based on Availability status
-        function getColor(availability) {
-            switch (availability) {
-                case 0: return 'red';
-                case 1: return 'green';
-                case 2: return 'orange';
-                case 3: return 'blue';
-                case 4: return 'yellow';
-                default: return 'gray';
-            }
-        }
-
-        // Check if geometry is valid
-        function isValidGeoJson(geometry) {
-            return (
-                geometry &&
-                geometry.type &&
-                (geometry.type === "Polygon" || geometry.type === "MultiPolygon") &&
-                Array.isArray(geometry.coordinates) &&
-                geometry.coordinates.length > 0
-            );
-        }
-
-        // Fetch FSAs from Firestore and display on the map
-        async function loadFSAs() {
+        // Basic fetch from Firestore
+        async function fetchFSAs() {
             const fsaCollection = collection(db, 'fsas');
             const snapshot = await getDocs(fsaCollection);
-            const fsaData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            fsaData.forEach(fsa => {
-                const fsaName = fsa.Name;
-                const availability = fsa.Availability;
-
-                try {
-                    const rawGeometry = fsa.geometry;
-                    console.log(`Raw geometry for FSA ${fsaName}:`, rawGeometry); // Log raw geometry
-
-                    // Catch JSON parse errors
-                    let geoJsonGeometry;
-                    try {
-                        geoJsonGeometry = JSON.parse(rawGeometry); // Parse string into GeoJSON
-                    } catch (parseError) {
-                        console.error(`Error parsing geometry for FSA ${fsaName}:`, parseError);
-                        return; // Skip this FSA if the geometry can't be parsed
-                    }
-
-                    // Log the parsed GeoJSON geometry for debugging
-                    console.log("Parsed GeoJSON geometry for FSA:", fsaName, geoJsonGeometry);
-
-                    const geoJsonFeature = {
-                        type: "Feature",
-                        properties: {
-                            Name: fsaName,
-                            Availability: availability
-                        },
-                        geometry: geoJsonGeometry // Use the parsed GeoJSON geometry
-                    };
-
-                    // Ensure the GeoJSON is valid before adding it to the map
-                    if (isValidGeoJson(geoJsonFeature.geometry)) {
-                        // Add the polygon to the map
-                        L.geoJSON(geoJsonFeature, {
-                            style: function(feature) {
-                                return {
-                                    fillColor: getColor(feature.properties.Availability),
-                                    weight: 2,
-                                    opacity: 1,
-                                    color: 'white',
-                                    dashArray: '3',
-                                    fillOpacity: 0.7
-                                };
-                            },
-                            onEachFeature: function(feature, layer) {
-                                layer.bindTooltip(fsaName, {
-                                    permanent: true,
-                                    direction: 'center',
-                                    className: 'fsa-label'
-                                }).openTooltip();
-
-                                const popupContent = `
-                                    <b>FSA: ${fsaName}</b><br>
-                                    <label>Change Availability:</label>
-                                    <select id="statusSelect">
-                                        <option value="0" ${availability === 0 ? 'selected' : ''}>Not Available</option>
-                                        <option value="1" ${availability === 1 ? 'selected' : ''}>Available Now</option>
-                                        <option value="2" ${availability === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
-                                        <option value="3" ${availability === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
-                                        <option value="4" ${availability === 4 ? 'selected' : ''}>Under Construction</option>
-                                    </select>
-                                    <button onclick="updateAvailability('${fsa.id}', document.getElementById('statusSelect').value)">Update</button>
-                                `;
-                                layer.bindPopup(popupContent);
-                            }
-                        }).addTo(map);
-                    } else {
-                        console.error(`Invalid GeoJSON for FSA: ${fsaName}`, geoJsonFeature);
-                    }
-                } catch (error) {
-                    console.error(`Error parsing or rendering FSA: ${fsaName}`, error);
-                }
+            // Log the fetched data
+            snapshot.forEach(doc => {
+                console.log("Fetched FSA:", doc.id, doc.data());
             });
         }
 
-        // Function to update availability status in Firestore
-        async function updateAvailability(fsaId, newStatus) {
-            const fsaRef = doc(db, 'fsas', fsaId);
-            await updateDoc(fsaRef, {
-                Availability: parseInt(newStatus)
-            });
-            alert("Availability updated successfully!");
-            location.reload();
-        }
-
-        // Initialize Leaflet map and load FSAs
-        document.addEventListener('DOMContentLoaded', () => {
-            const map = L.map('map').setView([37.105, -78.327], 10);
-
-            // Add OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-
-            console.log("Map initialized");
-
-            // Load FSAs and display them on the map
-            loadFSAs();
-        });
+        fetchFSAs();  // Run the fetch function
     </script>
 
     <!-- Leaflet Scripts -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <script>
+        // Initialize Leaflet map
+        const map = L.map('map').setView([37.105, -78.327], 10);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        console.log("Map initialized");
+    </script>
 
 </body>
 </html>
