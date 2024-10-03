@@ -1,72 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map</title>
+    <title>FSA Map with OpenCage Geocoder</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 </head>
 <body>
     <div id="map" style="width: 100%; height: 600px;"></div>
-    
+    <input type="text" id="address" placeholder="Enter address">
+    <button onclick="geocodeAddress()">Search</button>
+
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-    
     <script>
-        // Initialize the map and set its view to a default location
-        var map = L.map('map').setView([37.105, -78.327], 10); // Adjust as needed
+        // Initialize the map
+        var map = L.map('map').setView([37.105, -78.327], 10);
 
         // Add OpenStreetMap basemap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Fetch and load GeoJSON data from GitHub Pages
+        // Fetch and load GeoJSON data
         fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
             .then(response => response.json())
             .then(data => {
-                // Add GeoJSON layer to the map
                 L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
                         var fsaName = feature.properties.Name;
                         var fsaAvailability = feature.properties.Availability;
 
-                        // Convert availability codes into readable text
-                        var availabilityText = "";
-                        switch(fsaAvailability) {
-                            case 0: availabilityText = "Not Available"; break;
-                            case 1: availabilityText = "Available Now"; break;
-                            case 2: availabilityText = "Coming Soon, No Orders Yet"; break;
-                            case 3: availabilityText = "Coming Soon & Pre-Order Available"; break;
-                            case 4: availabilityText = "Under Construction"; break;
-                            default: availabilityText = "Unknown";
-                        }
+                        var availabilityText = ["Not Available", "Available Now", "Coming Soon, No Orders Yet", "Coming Soon & Pre-Order Available", "Under Construction"][fsaAvailability] || "Unknown";
 
-                        // Bind a popup to each polygon with Name and Availability info
-                        layer.bindPopup("FSA: " + (fsaName ? fsaName : "Unknown") + 
-                            "<br>Availability: " + availabilityText);
+                        layer.bindPopup("FSA: " + (fsaName ? fsaName : "Unknown") +
+                                        "<br>Availability: " + availabilityText);
                     }
                 }).addTo(map);
-            })
-            .catch(err => console.error("Error loading GeoJSON: ", err));
+            });
 
-        // Add address search functionality using Nominatim (OpenStreetMap geocoding)
-        L.Control.geocoder({
-            defaultMarkGeocode: true,
-            geocodingQueryParams: {
-                countrycodes: 'us', // Restrict to US addresses, or change as needed
-            }
-        }).on('markgeocode', function(result) {
-            var bbox = result.geocode.bbox;
-            var poly = L.polygon([
-                bbox.getSouthEast(),
-                bbox.getNorthEast(),
-                bbox.getNorthWest(),
-                bbox.getSouthWest()
-            ]).addTo(map);
-            map.fitBounds(poly.getBounds());
-        }).addTo(map);
+        // OpenCage Geocoding function
+        function geocodeAddress() {
+            var apiKey = '4cedda11dbc94d3ea6eb8dce542b3e9d';  // Replace with your OpenCage API key
+            var address = document.getElementById('address').value;
+            var url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${apiKey}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results.length > 0) {
+                        var latLng = data.results[0].geometry;  // Get lat and lng
+                        map.setView([latLng.lat, latLng.lng], 14);  // Zoom to the location
+
+                        // Place a marker at the found location
+                        L.marker([latLng.lat, latLng.lng]).addTo(map)
+                            .bindPopup(`Address: ${data.results[0].formatted}`).openPopup();
+                    } else {
+                        alert("Address not found. Please try again.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching geocoding data: ', error);
+                });
+        }
     </script>
 </body>
 </html>
