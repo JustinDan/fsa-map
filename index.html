@@ -96,7 +96,8 @@
                 return;
             }
 
-            const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}&bounds=${virginiaBounds}`;
+            // URL with Virginia bounding box and United States restriction
+            const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}&bounds=${virginiaBounds}&countrycode=US`;
             try {
                 const response = await fetch(url);
                 const data = await response.json();
