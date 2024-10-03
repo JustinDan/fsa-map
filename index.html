@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Render One FSA GeoJSON</title>
+    <title>Render Multiple FSAs</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -36,8 +36,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Fetch FSAs and attempt to render just one FSA's geometry on the map
-        async function fetchAndRenderOneFSA() {
+        // Function to fetch and render multiple FSAs
+        async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
             const snapshot = await getDocs(fsaCollection);
 
@@ -46,37 +46,38 @@
                 return;
             }
 
-            // Fetch and log one FSA's data
-            const firstDoc = snapshot.docs[0];
-            const fsaData = firstDoc.data();
-            console.log("Fetched FSA:", firstDoc.id, fsaData);
+            // Loop through all FSAs and render their geometry
+            snapshot.forEach(doc => {
+                const fsaData = doc.data();
+                console.log("Fetched FSA:", doc.id, fsaData);
 
-            // Assuming that fsaData.geometry is a valid GeoJSON string
-            let parsedGeoJson = null;
-            try {
-                parsedGeoJson = JSON.parse(fsaData.geometry);  // Parse the geometry string
-                console.log("Parsed GeoJSON geometry:", parsedGeoJson);
-            } catch (error) {
-                console.error("Error parsing GeoJSON:", error);
-                return;
-            }
+                // Assuming that fsaData.geometry is a valid GeoJSON string
+                let parsedGeoJson = null;
+                try {
+                    parsedGeoJson = JSON.parse(fsaData.geometry);  // Parse the geometry string
+                    console.log("Parsed GeoJSON geometry:", parsedGeoJson);
+                } catch (error) {
+                    console.error("Error parsing GeoJSON for FSA:", doc.id, error);
+                    return;  // Skip this FSA if the geometry can't be parsed
+                }
 
-            // Validate and render the geometry if it's a valid GeoJSON object
-            if (parsedGeoJson && parsedGeoJson.type && parsedGeoJson.coordinates) {
-                L.geoJSON(parsedGeoJson, {
-                    style: {
-                        color: 'blue',
-                        weight: 2,
-                        fillOpacity: 0.5
-                    }
-                }).addTo(map);
-                console.log("FSA geometry added to the map.");
-            } else {
-                console.error("Invalid GeoJSON structure:", parsedGeoJson);
-            }
+                // Validate and render the geometry if it's a valid GeoJSON object
+                if (parsedGeoJson && parsedGeoJson.type && parsedGeoJson.coordinates) {
+                    L.geoJSON(parsedGeoJson, {
+                        style: {
+                            color: 'blue',
+                            weight: 2,
+                            fillOpacity: 0.5
+                        }
+                    }).addTo(map);
+                    console.log("FSA geometry added to the map for FSA:", doc.id);
+                } else {
+                    console.error("Invalid GeoJSON structure for FSA:", doc.id, parsedGeoJson);
+                }
+            });
         }
 
-        fetchAndRenderOneFSA();  // Run the function to fetch and render one FSA
+        fetchAndRenderAllFSAs();  // Run the function to fetch and render all FSAs
     </script>
 
     <!-- Leaflet Scripts -->
