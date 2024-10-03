@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSA Map with Editable Availability and Zoom-Dependent Labels</title>
+    <title>FSA Map with Permanent Labels and Full-Screen Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
-        #map {
-            height: 600px;
-            width: 100%;
+        /* Fullscreen map */
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
         }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
         /* CSS for the FSA labels */
         .fsa-label {
-            font-size: 12px;
+            font-size: 10px;  /* Make the labels smaller */
             font-weight: bold;
             background-color: rgba(255, 255, 255, 0.7);
             padding: 2px 4px;
@@ -72,7 +76,7 @@
             }
         }
 
-        // Function to fetch and render multiple FSAs with editable availability and labels
+        // Function to fetch and render multiple FSAs with editable availability and permanent labels
         async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
             const snapshot = await getDocs(fsaCollection);
@@ -107,12 +111,11 @@
                         }
                     }).addTo(map);
 
-                    // Add a label (tooltip) to each FSA, only visible on zoom level 12 or higher
+                    // Add permanent label (tooltip) to each FSA
                     const label = L.tooltip({
                         permanent: true,
                         direction: 'center',
-                        className: 'fsa-label',
-                        opacity: 0  // Initially hidden, will be shown based on zoom
+                        className: 'fsa-label'
                     }).setContent(fsaData.Name);
                     layer.bindTooltip(label);
 
@@ -142,27 +145,13 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
-        // Initialize Leaflet map with zoom-dependent label visibility
+        // Initialize Leaflet map with full-screen dimensions
         const map = L.map('map').setView([37.105, -78.327], 10);
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
-
-        // Control label visibility based on zoom level
-        map.on('zoomend', function() {
-            const zoomLevel = map.getZoom();
-            map.eachLayer(function(layer) {
-                if (layer.getTooltip) {
-                    const tooltip = layer.getTooltip();
-                    if (tooltip) {
-                        tooltip.options.opacity = (zoomLevel >= 12) ? 1 : 0;
-                        tooltip.update();
-                    }
-                }
-            });
-        });
 
         console.log("Map initialized");
     </script>
