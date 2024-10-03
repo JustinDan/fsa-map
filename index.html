@@ -20,15 +20,16 @@
         }).addTo(map);
 
         // Load FSA GeoJSON
-        fetch('https://justindan.github.io/fsa-map/')  // Replace with your GeoJSON URL
-            .then(response => response.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    onEachFeature: function (feature, layer) {
-                        layer.bindPopup("FSA: " + feature.properties.name); // Customize based on your GeoJSON fields
-                    }
-                }).addTo(map);
-            });
+        fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
+    .then(response => response.json())
+    .then(data => {
+        L.geoJSON(data, {
+            onEachFeature: function (feature, layer) {
+                layer.bindPopup("FSA: " + feature.properties.name);  // Customize based on your GeoJSON fields
+            }
+        }).addTo(map);
+    });
+
 
         // Add address search functionality using Nominatim (OpenStreetMap geocoding)
         L.Control.geocoder({
