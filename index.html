@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Render Multiple FSAs</title>
+    <title>FSA Map with Availability Colors</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -22,7 +22,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",
@@ -36,7 +36,19 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Function to fetch and render multiple FSAs
+        // Function to determine polygon color based on Availability status
+        function getColor(availability) {
+            switch (availability) {
+                case 0: return 'red';    // Not Available
+                case 1: return 'green';  // Available Now
+                case 2: return 'orange'; // Coming Soon, No Orders Yet
+                case 3: return 'blue';   // Coming Soon & Pre-Order Available
+                case 4: return 'yellow'; // Under Construction
+                default: return 'gray';  // Unknown status
+            }
+        }
+
+        // Function to fetch and render multiple FSAs with colors based on availability
         async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
             const snapshot = await getDocs(fsaCollection);
@@ -65,7 +77,7 @@
                 if (parsedGeoJson && parsedGeoJson.type && parsedGeoJson.coordinates) {
                     L.geoJSON(parsedGeoJson, {
                         style: {
-                            color: 'blue',
+                            color: getColor(fsaData.Availability),  // Color based on availability
                             weight: 2,
                             fillOpacity: 0.5
                         }
