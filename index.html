@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with Availability Colors</title>
+    <title>FSA Map with Labels</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -22,7 +22,6 @@
 
         // Function to determine the color based on availability
         function getColor(availability) {
-            console.log("Availability:", availability);  // Log to check what availability values are being used
             switch (availability) {
                 case 0: return 'red';    // Not Available
                 case 1: return 'green';  // Available Now
@@ -33,10 +32,8 @@
 
         // Style each polygon based on the availability
         function styleFeature(feature) {
-            const availability = feature.properties.Availability;
-            console.log("Styling feature with Availability:", availability);  // Log the feature being styled
             return {
-                fillColor: getColor(availability),
+                fillColor: getColor(feature.properties.Availability),
                 weight: 2,
                 opacity: 1,
                 color: 'white',  // Border color
@@ -55,10 +52,16 @@
                         var fsaName = feature.properties.Name;
                         var fsaAvailability = feature.properties.Availability;
 
-                        console.log("Feature Name:", fsaName, "Availability:", fsaAvailability);  // Log feature data
-
                         var availabilityText = ["Not Available", "Available Now", "Coming Soon, No Orders Yet"][fsaAvailability] || "Unknown";
 
+                        // Add permanent labels using tooltips
+                        layer.bindTooltip(fsaName, {
+                            permanent: true,
+                            direction: "center",  // Centered on the polygon
+                            className: "fsa-label" // Custom class for styling
+                        }).openTooltip();
+
+                        // Bind popups for more details
                         layer.bindPopup("FSA: " + (fsaName ? fsaName : "Unknown") +
                                         "<br>Availability: " + availabilityText);
                     }
@@ -66,5 +69,16 @@
             })
             .catch(err => console.error("Error loading GeoJSON: ", err));
     </script>
+
+    <style>
+        /* Customize label appearance */
+        .fsa-label {
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.7); /* White background with some transparency */
+            padding: 2px;
+            border-radius: 4px;
+        }
+    </style>
 </body>
 </html>
