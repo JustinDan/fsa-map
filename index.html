@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with Scalable Labels</title>
+    <title>FSA Map with Search and Labels</title>
+    <meta charset="utf-8">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 </head>
 <body>
     <div id="map" style="width: 100%; height: 600px;"></div>
+    <input type="text" id="address" placeholder="Enter address">
+    <button onclick="geocodeAddress()">Search</button>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
@@ -19,6 +22,12 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+
+        // Store the current search marker
+        let searchMarker = null;
+
+        // OpenCage API key (provided earlier)
+        const openCageApiKey = '4cedda11dbc94d3ea6eb8dce542b3e9d';
 
         // Function to determine the color based on availability
         function getColor(availability) {
@@ -40,15 +49,6 @@
                 dashArray: '3',
                 fillOpacity: 0.7
             };
-        }
-
-        // Adjust label size based on zoom level
-        function adjustLabelSize() {
-            var zoomLevel = map.getZoom();
-            var labelSize = Math.max(8, zoomLevel * 1.2);  // Scale the size based on zoom, with a minimum size of 8px
-            document.querySelectorAll('.fsa-label').forEach(function(label) {
-                label.style.fontSize = labelSize + 'px';
-            });
         }
 
         // Fetch and load GeoJSON data
@@ -80,14 +80,39 @@
                         });
                     }
                 }).addTo(map);
-
-                // Adjust label size based on initial zoom
-                adjustLabelSize();
             })
             .catch(err => console.error("Error loading GeoJSON: ", err));
 
-        // Listen to zoom events and adjust label size dynamically
-        map.on('zoomend', adjustLabelSize);
+        // Function to geocode an address using OpenCage API and zoom to the result
+        function geocodeAddress() {
+            var address = document.getElementById('address').value;
+            var url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results.length > 0) {
+                        var latLng = data.results[0].geometry;  // Get lat and lng
+                        
+                        // Remove the previous search marker if it exists
+                        if (searchMarker) {
+                            map.removeLayer(searchMarker);
+                        }
+
+                        // Add a new marker at the geocoded location
+                        searchMarker = L.marker([latLng.lat, latLng.lng]).addTo(map)
+                            .bindPopup(`Address: ${data.results[0].formatted}`).openPopup();
+
+                        // Zoom to the marker's location
+                        map.setView([latLng.lat, latLng.lng], 14);
+                    } else {
+                        alert("Address not found. Please try again.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching geocoding data: ', error);
+                });
+        }
     </script>
 
     <style>
