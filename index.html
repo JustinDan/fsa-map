@@ -65,32 +65,111 @@
     <!-- This is the map container -->
     <div id="map"></div>
 
-    <!-- Firebase Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
 
-    <!-- Leaflet Scripts -->
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+        // Firebase configuration (replace with your actual settings)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",
+            authDomain: "fsa-status.firebaseapp.com",
+            projectId: "fsa-status",
+            storageBucket: "fsa-status.appspot.com",
+            messagingSenderId: "153479147028",
+            appId: "1:153479147028:web:cf2512b8dd9411ec068101",
+            measurementId: "G-Z54VGVDCHF"
+        };
 
-    <script>
-        // Wait until Firebase has loaded to initialize the app
-        document.addEventListener('DOMContentLoaded', function () {
-            // Firebase Configuration
-            const firebaseConfig = {
-                apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",  // Replace with your API key
-                authDomain: "fsa-status.firebaseapp.com",
-                projectId: "fsa-status",
-                storageBucket: "fsa-status.appspot.com",
-                messagingSenderId: "153479147028",
-                appId: "1:153479147028:web:cf2512b8dd9411ec068101",
-                measurementId: "G-Z54VGVDCHF"
-            };
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-            // Initialize Firebase
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
+        // Function to determine polygon color based on Availability status
+        function getColor(availability) {
+            switch (availability) {
+                case 0: return 'red';    // Not Available
+                case 1: return 'green';  // Available Now
+                case 2: return 'orange'; // Coming Soon, No Orders Yet
+                case 3: return 'blue';   // Coming Soon & Pre-Order Available
+                case 4: return 'yellow'; // Under Construction
+                default: return 'gray';  // Fallback for undefined or other statuses
+            }
+        }
 
-            // Initialize Leaflet Map
+        // Fetch FSAs from Firestore and display on the map
+        async function loadFSAs() {
+            const fsaCollection = collection(db, 'fsas');
+            const snapshot = await getDocs(fsaCollection);
+            const fsaData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            fsaData.forEach(fsa => {
+                const fsaName = fsa.Name;
+                const availability = fsa.Availability;
+
+                try {
+                    const geoJsonFeature = {
+                        type: "Feature",
+                        properties: {
+                            Name: fsaName,
+                            Availability: availability
+                        },
+                        geometry: JSON.parse(fsa.geometry) // Parse string into GeoJSON
+                    };
+
+                    // Add the polygon to the map
+                    L.geoJSON(geoJsonFeature, {
+                        style: function(feature) {
+                            return {
+                                fillColor: getColor(feature.properties.Availability),
+                                weight: 2,
+                                opacity: 1,
+                                color: 'white',
+                                dashArray: '3',
+                                fillOpacity: 0.7
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            layer.bindTooltip(fsaName, {
+                                permanent: true,
+                                direction: 'center',
+                                className: 'fsa-label'
+                            }).openTooltip();
+
+                            const popupContent = `
+                                <b>FSA: ${fsaName}</b><br>
+                                <label>Change Availability:</label>
+                                <select id="statusSelect">
+                                    <option value="0" ${availability === 0 ? 'selected' : ''}>Not Available</option>
+                                    <option value="1" ${availability === 1 ? 'selected' : ''}>Available Now</option>
+                                    <option value="2" ${availability === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
+                                    <option value="3" ${availability === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
+                                    <option value="4" ${availability === 4 ? 'selected' : ''}>Under Construction</option>
+                                </select>
+                                <button onclick="updateAvailability('${fsa.id}', document.getElementById('statusSelect').value)">Update</button>
+                            `;
+                            layer.bindPopup(popupContent);
+                        }
+                    }).addTo(map);
+                } catch (error) {
+                    console.error(`Error parsing or rendering FSA: ${fsaName}`, error);
+                }
+            });
+        }
+
+        // Function to update availability status in Firestore
+        async function updateAvailability(fsaId, newStatus) {
+            const fsaRef = doc(db, 'fsas', fsaId);
+            await updateDoc(fsaRef, {
+                Availability: parseInt(newStatus)
+            });
+            alert("Availability updated successfully!");
+            location.reload(); // Reload the page to reflect changes
+        }
+
+        // Initialize Leaflet map and load FSAs
+        document.addEventListener('DOMContentLoaded', () => {
             const map = L.map('map').setView([37.105, -78.327], 10);
 
             // Add OpenStreetMap tiles
@@ -100,93 +179,7 @@
 
             console.log("Map initialized");
 
-            // Function to determine polygon color based on Availability status
-            function getColor(availability) {
-                switch (availability) {
-                    case 0: return 'red';    // Not Available
-                    case 1: return 'green';  // Available Now
-                    case 2: return 'orange'; // Coming Soon, No Orders Yet
-                    case 3: return 'blue';   // Coming Soon & Pre-Order Available
-                    case 4: return 'yellow'; // Under Construction
-                    default: return 'gray';  // Fallback for undefined or other statuses
-                }
-            }
-
-            // Fetch FSAs from Firestore and display on the map
-            function loadFSAs() {
-                db.collection('fsas').get().then(snapshot => {
-                    snapshot.forEach(doc => {
-                        const fsa = doc.data();
-                        const fsaName = fsa.Name;
-                        const availability = fsa.Availability;
-
-                        // Error handling: Try to parse the geometry field
-                        try {
-                            const geoJsonFeature = {
-                                type: "Feature",
-                                properties: {
-                                    Name: fsaName,
-                                    Availability: availability
-                                },
-                                geometry: JSON.parse(fsa.geometry) // Parse string into GeoJSON
-                            };
-
-                            // Add the polygon to the map
-                            L.geoJSON(geoJsonFeature, {
-                                style: function(feature) {
-                                    return {
-                                        fillColor: getColor(feature.properties.Availability),
-                                        weight: 2,
-                                        opacity: 1,
-                                        color: 'white',
-                                        dashArray: '3',
-                                        fillOpacity: 0.7
-                                    };
-                                },
-                                onEachFeature: function(feature, layer) {
-                                    layer.bindTooltip(fsaName, {
-                                        permanent: true,
-                                        direction: 'center',
-                                        className: 'fsa-label'
-                                    }).openTooltip();
-
-                                    const popupContent = `
-                                        <b>FSA: ${fsaName}</b><br>
-                                        <label>Change Availability:</label>
-                                        <select id="statusSelect">
-                                            <option value="0" ${availability === 0 ? 'selected' : ''}>Not Available</option>
-                                            <option value="1" ${availability === 1 ? 'selected' : ''}>Available Now</option>
-                                            <option value="2" ${availability === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
-                                            <option value="3" ${availability === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
-                                            <option value="4" ${availability === 4 ? 'selected' : ''}>Under Construction</option>
-                                        </select>
-                                        <button onclick="updateAvailability('${doc.id}', document.getElementById('statusSelect').value)">Update</button>
-                                    `;
-                                    layer.bindPopup(popupContent);
-                                }
-                            }).addTo(map);
-                        } catch (error) {
-                            console.error(`Error parsing or rendering FSA: ${fsaName}`, error);
-                        }
-                    });
-                }).catch(error => {
-                    console.error("Error fetching FSAs:", error);
-                });
-            }
-
-            // Function to update availability status in Firestore
-            function updateAvailability(fsaId, newStatus) {
-                db.collection('fsas').doc(fsaId).update({
-                    Availability: parseInt(newStatus)
-                }).then(() => {
-                    alert("Availability updated successfully!");
-                    location.reload(); // Reload the page to reflect changes
-                }).catch(error => {
-                    console.error("Error updating availability:", error);
-                });
-            }
-
-            // Load FSAs on map initialization
+            // Load FSAs and display them on the map
             loadFSAs();
         });
     </script>
