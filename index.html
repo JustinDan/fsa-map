@@ -116,16 +116,19 @@
                 const availability = fsa.Availability;
 
                 try {
+                    const rawGeometry = fsa.geometry;
+                    console.log(`Raw geometry for FSA ${fsaName}:`, rawGeometry); // Log raw geometry
+
+                    // Parse and validate the geometry field
                     const geoJsonFeature = {
                         type: "Feature",
                         properties: {
                             Name: fsaName,
                             Availability: availability
                         },
-                        geometry: JSON.parse(fsa.geometry) // Parse string into GeoJSON
+                        geometry: JSON.parse(rawGeometry) // Parse string into GeoJSON
                     };
 
-                    // Log the geoJsonFeature to debug its structure
                     console.log("Parsed GeoJSON feature for FSA:", fsaName, geoJsonFeature);
 
                     // Ensure the GeoJSON is valid before adding it to the map
