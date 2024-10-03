@@ -39,6 +39,11 @@
         button:hover {
             background-color: #45a049;
         }
+
+        #map {
+            width: 100%;
+            height: 600px;
+        }
     </style>
 </head>
 <body>
@@ -49,7 +54,7 @@
     </div>
 
     <!-- Map container -->
-    <div id="map" style="width: 100%; height: 600px;"></div>
+    <div id="map"></div> <!-- Ensure the map container exists -->
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
@@ -76,6 +81,9 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+
+        // Log statement to check if the map initialized correctly
+        console.log("Map initialized");
 
         // Function to determine the color based on availability
         function getColor(availability) {
@@ -128,6 +136,7 @@
 
         // Load FSAs from Firestore and plot them on the map
         db.collection('fsas').get().then((snapshot) => {
+            console.log("Data fetched from Firestore");  // Log when data is fetched
             snapshot.forEach((doc) => {
                 const fsa = doc.data();
                 const docId = doc.id;  // The document ID for this FSA
@@ -135,40 +144,49 @@
                 const fsaAvailability = fsa.Availability;
 
                 // Parse the geometry field back to GeoJSON
-                const geoJsonFeature = {
-                    type: "Feature",
-                    properties: {
-                        Name: fsaName,
-                        Availability: fsaAvailability
-                    },
-                    geometry: JSON.parse(fsa.geometry)  // Parse the geometry string back to GeoJSON
-                };
+                try {
+                    const geoJsonFeature = {
+                        type: "Feature",
+                        properties: {
+                            Name: fsaName,
+                            Availability: fsaAvailability
+                        },
+                        geometry: JSON.parse(fsa.geometry)  // Parse the geometry string back to GeoJSON
+                    };
 
-                // Add GeoJSON polygon to map
-                L.geoJSON(geoJsonFeature, {
-                    style: function(feature) {
-                        return {
-                            fillColor: getColor(feature.properties.Availability),
-                            weight: 2,
-                            opacity: 1,
-                            color: 'white',
-                            dashArray: '3',
-                            fillOpacity: 0.7
-                        };
-                    },
-                    onEachFeature: function(feature, layer) {
-                        // Add permanent label using tooltips
-                        layer.bindTooltip(fsaName, {
-                            permanent: true,
-                            direction: 'center',
-                            className: 'fsa-label'
-                        }).openTooltip();
+                    // Add GeoJSON polygon to map
+                    L.geoJSON(geoJsonFeature, {
+                        style: function(feature) {
+                            return {
+                                fillColor: getColor(feature.properties.Availability),
+                                weight: 2,
+                                opacity: 1,
+                                color: 'white',
+                                dashArray: '3',
+                                fillOpacity: 0.7
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            // Add permanent label using tooltips
+                            layer.bindTooltip(fsaName, {
+                                permanent: true,
+                                direction: 'center',
+                                className: 'fsa-label'
+                            }).openTooltip();
 
-                        // Add popup with editable dropdown
-                        layer.bindPopup(createPopupContent(fsaName, fsaAvailability, docId));
-                    }
-                }).addTo(map);
+                            // Add popup with editable dropdown
+                            layer.bindPopup(createPopupContent(fsaName, fsaAvailability, docId));
+                        }
+                    }).addTo(map);
+
+                    console.log(`FSA ${fsaName} added to map`);  // Log each FSA added
+
+                } catch (error) {
+                    console.error(`Error parsing or rendering FSA: ${fsaName}`, error);
+                }
             });
+        }).catch((error) => {
+            console.error("Error fetching data from Firestore", error);
         });
 
     </script>
