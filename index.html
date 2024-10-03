@@ -94,6 +94,17 @@
             }
         }
 
+        // Check if geometry is valid
+        function isValidGeoJson(geometry) {
+            return (
+                geometry &&
+                geometry.type &&
+                (geometry.type === "Polygon" || geometry.type === "MultiPolygon") &&
+                Array.isArray(geometry.coordinates) &&
+                geometry.coordinates.length > 0
+            );
+        }
+
         // Fetch FSAs from Firestore and display on the map
         async function loadFSAs() {
             const fsaCollection = collection(db, 'fsas');
@@ -115,10 +126,10 @@
                     };
 
                     // Log the geoJsonFeature to debug its structure
-                    console.log("Parsed GeoJSON feature: ", geoJsonFeature);
+                    console.log("Parsed GeoJSON feature for FSA:", fsaName, geoJsonFeature);
 
                     // Ensure the GeoJSON is valid before adding it to the map
-                    if (geoJsonFeature.geometry && geoJsonFeature.geometry.type && geoJsonFeature.geometry.coordinates) {
+                    if (isValidGeoJson(geoJsonFeature.geometry)) {
                         // Add the polygon to the map
                         L.geoJSON(geoJsonFeature, {
                             style: function(feature) {
