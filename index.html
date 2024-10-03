@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FSA Map with Search and Labels</title>
+    <title>FSA Map with Editable Status in Popup</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -11,7 +11,7 @@
             position: absolute;
             top: 10px;
             left: 50px;
-            z-index: 1000;  /* Ensure it is on top of the map */
+            z-index: 1000;
             background-color: white;
             padding: 10px;
             border-radius: 5px;
@@ -88,6 +88,41 @@
             };
         }
 
+        // Function to update the FSA status in memory (simulated backend)
+        function updateFSAStatus(fsa, newStatus) {
+            fsa.Availability = parseInt(newStatus);  // Update the status
+            L.geoJSON(fsa).setStyle({ fillColor: getColor(fsa.Availability) });  // Update color
+            alert('FSA status updated to: ' + getStatusText(newStatus));
+        }
+
+        // Function to get status text based on availability value
+        function getStatusText(status) {
+            const statuses = {
+                0: "Not Available",
+                1: "Available Now",
+                2: "Coming Soon, No Orders Yet",
+                3: "Coming Soon & Pre-Order Available",
+                4: "Under Construction"
+            };
+            return statuses[status] || "Unknown";
+        }
+
+        // Create the dropdown menu for selecting status inside the popup
+        function createPopupContent(fsaName, currentStatus, feature) {
+            return `
+                <b>FSA: ${fsaName}</b><br>
+                <label for="statusSelect">Change Availability:</label>
+                <select id="statusSelect">
+                    <option value="0" ${currentStatus === 0 ? 'selected' : ''}>Not Available</option>
+                    <option value="1" ${currentStatus === 1 ? 'selected' : ''}>Available Now</option>
+                    <option value="2" ${currentStatus === 2 ? 'selected' : ''}>Coming Soon, No Orders Yet</option>
+                    <option value="3" ${currentStatus === 3 ? 'selected' : ''}>Coming Soon & Pre-Order Available</option>
+                    <option value="4" ${currentStatus === 4 ? 'selected' : ''}>Under Construction</option>
+                </select>
+                <button onclick="updateFSAStatus(${JSON.stringify(feature.properties)}, document.getElementById('statusSelect').value)">Update Status</button>
+            `;
+        }
+
         // Fetch and load GeoJSON data
         fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
             .then(response => response.json())
@@ -98,18 +133,15 @@
                         var fsaName = feature.properties.Name;
                         var fsaAvailability = feature.properties.Availability;
 
-                        var availabilityText = ["Not Available", "Available Now", "Coming Soon, No Orders Yet"][fsaAvailability] || "Unknown";
-
-                        // Bind popups for more details
-                        layer.bindPopup("FSA: " + (fsaName ? fsaName : "Unknown") +
-                                        "<br>Availability: " + availabilityText);
-
                         // Add permanent labels using tooltips that are always visible
                         layer.bindTooltip(fsaName, {
                             permanent: true,           // Tooltip always visible
                             direction: 'center',       // Centered on the polygon
                             className: 'fsa-label'     // Custom class for styling
                         }).openTooltip();
+
+                        // Create a popup with a dropdown to edit the status
+                        layer.bindPopup(createPopupContent(fsaName, fsaAvailability, feature));
 
                         // Bring tooltips to front to ensure they aren't obscured by the polygons
                         layer.on('add', function() {
@@ -151,5 +183,15 @@
                 });
         }
     </script>
+
+    <style>
+        /* Customize label appearance */
+        .fsa-label {
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.7); /* White background with transparency */
+            padding: 2px;
+            border-radius: 4px;
+        }
+    </style>
 </body>
 </html>
