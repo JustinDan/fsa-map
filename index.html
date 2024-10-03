@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSA Map with Editable Availability and Labels</title>
+    <title>FSA Map with Editable Availability and Zoom-Dependent Labels</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -56,7 +56,7 @@
             }
         }
 
-        // Function to update the availability status in Firestore with error logging
+        // Function to update the availability status in Firestore
         async function updateAvailability(fsaId, newStatus) {
             try {
                 const fsaRef = doc(db, 'fsas', fsaId);
@@ -72,7 +72,7 @@
             }
         }
 
-        // Function to fetch and render multiple FSAs with editable availability
+        // Function to fetch and render multiple FSAs with editable availability and labels
         async function fetchAndRenderAllFSAs() {
             const fsaCollection = collection(db, 'fsas');
             const snapshot = await getDocs(fsaCollection);
