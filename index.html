@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSA Map with Permanent Labels and Full-Screen Map</title>
+    <title>FSA Map with Address Search, Permanent Labels, and Full-Screen Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 
     <style>
@@ -17,6 +17,33 @@
             height: 100%;
             width: 100%;
         }
+        #search-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        #address {
+            width: 300px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
         /* CSS for the FSA labels */
         .fsa-label {
             font-size: 10px;  /* Make the labels smaller */
@@ -28,6 +55,11 @@
     </style>
 </head>
 <body>
+
+    <div id="search-container">
+        <input type="text" id="address" placeholder="Enter address">
+        <button onclick="geocodeAddress()">Search</button>
+    </div>
 
     <div id="map"></div>
 
@@ -47,6 +79,46 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        let marker;  // Variable to hold the marker for the searched address
+
+        // OpenCage API Key for geocoding
+        const openCageApiKey = "4cedda11dbc94d3ea6eb8dce542b3e9d";
+
+        // Function to geocode an address using OpenCage API and place a marker on the map
+        async function geocodeAddress() {
+            const address = document.getElementById("address").value;
+            if (!address) {
+                alert("Please enter an address");
+                return;
+            }
+
+            const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(address)}&key=${openCageApiKey}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    const result = data.results[0];
+                    const lat = result.geometry.lat;
+                    const lng = result.geometry.lng;
+
+                    // If there is already a marker, remove it
+                    if (marker) {
+                        map.removeLayer(marker);
+                    }
+
+                    // Add a new marker for the searched address
+                    marker = L.marker([lat, lng]).addTo(map).bindPopup(result.formatted).openPopup();
+                    map.setView([lat, lng], 14);  // Zoom in to the searched location
+                } else {
+                    alert("Address not found. Please try again.");
+                }
+            } catch (error) {
+                console.error("Geocoding error:", error);
+                alert("An error occurred while geocoding. Please try again.");
+            }
+        }
 
         // Function to determine polygon color based on Availability status
         function getColor(availability) {
