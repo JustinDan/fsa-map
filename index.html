@@ -5,33 +5,57 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 </head>
 <body>
     <div id="map" style="width: 100%; height: 600px;"></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    
     <script>
-        // Initialize the map
-        var map = L.map('map').setView([0, 0], 2); // Set initial center and zoom
+        // Initialize the map and set its view to a default location
+        var map = L.map('map').setView([0, 0], 2); // Initial center and zoom
 
-        // Add OpenStreetMap basemap layer
+        // Add OpenStreetMap basemap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
         // Fetch and load GeoJSON data from GitHub Pages
-        fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')  // Replace with correct file URL
+        fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')  // Ensure the correct file path
             .then(response => response.json())
             .then(data => {
                 // Add GeoJSON layer to the map
                 L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
-                        // You can customize the popup or styling here
-                        layer.bindPopup("FSA: " + feature.properties.name);
+                        // Reference the correct property names from your GeoJSON file
+                        var fsaName = feature.properties.Name;  // 'Name' with a capital N
+                        var fsaAvailability = feature.properties.Availability;  // 'Availability'
+                        
+                        // Bind a popup to each polygon with Name and Availability info
+                        layer.bindPopup(
+                            "FSA: " + (fsaName ? fsaName : "Unknown") + 
+                            "<br>Availability: " + (fsaAvailability ? fsaAvailability : "Unknown")
+                        );
                     }
                 }).addTo(map);
             })
             .catch(err => console.error("Error loading GeoJSON: ", err));
+
+        // Add address search functionality using Nominatim (OpenStreetMap geocoding)
+        L.Control.geocoder({
+            defaultMarkGeocode: true
+        }).on('markgeocode', function(result) {
+            var bbox = result.geocode.bbox;
+            var poly = L.polygon([
+                bbox.getSouthEast(),
+                bbox.getNorthEast(),
+                bbox.getNorthWest(),
+                bbox.getSouthWest()
+            ]).addTo(map);
+            map.fitBounds(poly.getBounds());
+        }).addTo(map);
     </script>
 </body>
 </html>
