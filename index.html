@@ -15,7 +15,7 @@
     
     <script>
         // Initialize the map and set its view to a default location
-        var map = L.map('map').setView([0, 0], 2); // Initial center and zoom
+        var map = L.map('map').setView([37.105, -78.327], 10); // Center based on sample coordinates
 
         // Add OpenStreetMap basemap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -32,11 +32,33 @@
                         // Reference the correct property names from your GeoJSON file
                         var fsaName = feature.properties.Name;  // 'Name' with a capital N
                         var fsaAvailability = feature.properties.Availability;  // 'Availability'
-                        
+
+                        // Convert availability codes into readable text
+                        var availabilityText = "";
+                        switch(fsaAvailability) {
+                            case 0:
+                                availabilityText = "Not Available";
+                                break;
+                            case 1:
+                                availabilityText = "Available Now";
+                                break;
+                            case 2:
+                                availabilityText = "Coming Soon, No Orders Yet";
+                                break;
+                            case 3:
+                                availabilityText = "Coming Soon & Pre-Order Available";
+                                break;
+                            case 4:
+                                availabilityText = "Under Construction";
+                                break;
+                            default:
+                                availabilityText = "Unknown";
+                        }
+
                         // Bind a popup to each polygon with Name and Availability info
                         layer.bindPopup(
                             "FSA: " + (fsaName ? fsaName : "Unknown") + 
-                            "<br>Availability: " + (fsaAvailability ? fsaAvailability : "Unknown")
+                            "<br>Availability: " + availabilityText
                         );
                     }
                 }).addTo(map);
