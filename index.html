@@ -22,6 +22,7 @@
 
         // Function to determine the color based on availability
         function getColor(availability) {
+            console.log("Availability:", availability);  // Log to check what availability values are being used
             switch (availability) {
                 case 0: return 'red';    // Not Available
                 case 1: return 'green';  // Available Now
@@ -32,8 +33,10 @@
 
         // Style each polygon based on the availability
         function styleFeature(feature) {
+            const availability = feature.properties.Availability;
+            console.log("Styling feature with Availability:", availability);  // Log the feature being styled
             return {
-                fillColor: getColor(feature.properties.Availability),
+                fillColor: getColor(availability),
                 weight: 2,
                 opacity: 1,
                 color: 'white',  // Border color
@@ -51,6 +54,8 @@
                     onEachFeature: function (feature, layer) {
                         var fsaName = feature.properties.Name;
                         var fsaAvailability = feature.properties.Availability;
+
+                        console.log("Feature Name:", fsaName, "Availability:", fsaAvailability);  // Log feature data
 
                         var availabilityText = ["Not Available", "Available Now", "Coming Soon, No Orders Yet"][fsaAvailability] || "Unknown";
 
