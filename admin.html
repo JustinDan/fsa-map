@@ -5,8 +5,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
 </head>
 <body>
     <h1>FSA Availability Management</h1>
@@ -30,67 +28,53 @@
     <div id="result"></div>
 
     <script>
-        // Firebase configuration (from your provided details)
-        const firebaseConfig = {
-            apiKey: "AIzaSyAldSFCZiyKLOZZzIx3BclPi4IJaG4Bnek",
-            authDomain: "fsa-status.firebaseapp.com",
-            projectId: "fsa-status",
-            storageBucket: "fsa-status.appspot.com",
-            messagingSenderId: "153479147028",
-            appId: "1:153479147028:web:cf2512b8dd9411ec068101",
-            measurementId: "G-Z54VGVDCHF"
-        };
+        let fsaData = {};  // Store FSA data globally for easy access
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // Fetch the FSA data from the GeoJSON file
+        fetch('https://justindan.github.io/fsa-map/FSA_Pool.geojson')
+            .then(response => response.json())
+            .then(data => {
+                // Populate the dropdown with FSAs
+                const fsaSelect = document.getElementById('fsa-select');
+                data.features.forEach((feature) => {
+                    let option = document.createElement('option');
+                    option.value = feature.properties.Name;  // Use the FSA Name as value
+                    option.text = feature.properties.Name;   // Display the FSA Name
+                    fsaSelect.add(option);
+                    
+                    // Store FSA data in a global variable
+                    fsaData[feature.properties.Name] = feature;
+                });
+            })
+            .catch(error => console.error('Error loading FSA data:', error));
 
-        // Fetch the FSAs from Firestore and populate the dropdown
-        const fsaSelect = document.getElementById('fsa-select');
-        const fsaData = {};
-
-        // Fetch FSA data from Firestore
-        db.collection('fsas').get().then((snapshot) => {
-            snapshot.forEach((doc) => {
-                let fsa = doc.data();
-                let option = document.createElement('option');
-                option.value = doc.id;  // Use the document ID as value
-                option.text = fsa.Name;  // Display the FSA Name
-                fsaSelect.add(option);
-
-                // Store FSA data in a global object
-                fsaData[doc.id] = fsa;
-            });
-        });
-
-        // Update FSA availability in Firestore
+        // Update FSA availability
         function updateAvailability() {
-            const selectedFSA = fsaSelect.value;
-            const selectedStatus = parseInt(document.getElementById('status-select').value);
+            const fsaSelect = document.getElementById('fsa-select').value;
+            const statusSelect = document.getElementById('status-select').value;
 
-            // Update the selected FSA's availability
-            db.collection('fsas').doc(selectedFSA).update({
-                Availability: selectedStatus
-            }).then(() => {
-                displayResult(fsaData[selectedFSA], selectedStatus);
-            }).catch((error) => {
-                console.error('Error updating availability:', error);
-                document.getElementById('result').innerHTML = 'Error updating FSA.';
-            });
+            // Find the selected FSA and update its availability
+            const selectedFSA = fsaData[fsaSelect];
+            if (selectedFSA) {
+                selectedFSA.properties.Availability = parseInt(statusSelect);
+                displayResult(selectedFSA);
+            } else {
+                document.getElementById('result').innerHTML = 'FSA not found.';
+            }
         }
 
-        // Display the result after updating
-        function displayResult(fsa, status) {
+        // Display the result (simulating what would happen in a real update)
+        function displayResult(fsa) {
             const availabilityText = [
                 "Not Available",
                 "Available Now",
                 "Coming Soon, No Orders Yet",
                 "Coming Soon & Pre-Order Available",
                 "Under Construction"
-            ][status] || "Unknown";
+            ][fsa.properties.Availability] || "Unknown";
 
             document.getElementById('result').innerHTML = `
-                <p>Updated FSA: <strong>${fsa.Name}</strong></p>
+                <p>Updated FSA: <strong>${fsa.properties.Name}</strong></p>
                 <p>New Availability: <strong>${availabilityText}</strong></p>
             `;
         }
