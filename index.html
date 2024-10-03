@@ -3,14 +3,51 @@
 <head>
     <title>FSA Map with Search and Labels</title>
     <meta charset="utf-8">
-    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        /* Style for the search input field */
+        #search-container {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            z-index: 1000;  /* Ensure it is on top of the map */
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        #address {
+            width: 300px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
+    <!-- Search container -->
+    <div id="search-container">
+        <input type="text" id="address" placeholder="Enter address">
+        <button onclick="geocodeAddress()">Search</button>
+    </div>
+
+    <!-- Map container -->
     <div id="map" style="width: 100%; height: 600px;"></div>
-    <input type="text" id="address" placeholder="Enter address">
-    <button onclick="geocodeAddress()">Search</button>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
@@ -114,15 +151,5 @@
                 });
         }
     </script>
-
-    <style>
-        /* Customize label appearance */
-        .fsa-label {
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.7); /* White background with transparency */
-            padding: 2px;
-            border-radius: 4px;
-        }
-    </style>
 </body>
 </html>
