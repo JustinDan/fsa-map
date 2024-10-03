@@ -48,14 +48,20 @@
             }
         }
 
-        // Function to update the availability status in Firestore
+        // Function to update the availability status in Firestore with error logging
         async function updateAvailability(fsaId, newStatus) {
-            const fsaRef = doc(db, 'fsas', fsaId);
-            await updateDoc(fsaRef, {
-                Availability: parseInt(newStatus)
-            });
-            alert("Availability updated successfully!");
-            location.reload();  // Reload the page to reflect the changes
+            try {
+                const fsaRef = doc(db, 'fsas', fsaId);
+                await updateDoc(fsaRef, {
+                    Availability: parseInt(newStatus)
+                });
+                console.log(`Availability for FSA ${fsaId} updated to ${newStatus}`);
+                alert("Availability updated successfully!");
+                location.reload();  // Reload the page to reflect the changes
+            } catch (error) {
+                console.error(`Error updating availability for FSA ${fsaId}:`, error);
+                alert("Error updating availability. Please check the console for details.");
+            }
         }
 
         // Function to fetch and render multiple FSAs with editable availability
